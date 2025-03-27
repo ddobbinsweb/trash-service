@@ -37,7 +37,7 @@ jobs:
     - name: Azure Login
       uses: azure/login@v2
       with:
-        creds: ${{ secrets.trashservice_app_20250327091128_SPN }}
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
     - name: Deploy to containerapp
       uses: azure/CLI@v2
       with:
@@ -50,3 +50,4 @@ jobs:
     - name: logout
       run: >
         az logout
+  
