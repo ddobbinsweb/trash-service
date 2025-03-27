@@ -1,0 +1,30 @@
+@page "/addcustomer"
+@using TrashService.Data
+@using TrashService.Enums
+@inject AppDbContext db
+@inject NavigationManager nav
+
+<h3>Add Customer</h3>
+
+<EditForm Model="customer" OnValidSubmit="SaveCustomer">
+    <label>Name: <input @bind="customer.Name" /></label><br />
+    <label>Address: <input @bind="customer.Address" /></label><br />
+    <label>Payment Type: 
+        <select @bind="customer.PaymentType">
+            <option value="@PaymentType.Prepay">Prepay</option>
+            <option value="@PaymentType.Postpay">Postpay</option>
+        </select>
+    </label><br />
+    <button type="submit">Save</button>
+</EditForm>
+
+@code {
+    private Models.Customer customer = new ();
+
+    private async Task SaveCustomer()
+    {
+        db.Customers.Add(customer);
+        await db.SaveChangesAsync();
+        nav.NavigateTo("/customers");
+    }
+}

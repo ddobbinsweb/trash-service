@@ -1,0 +1,55 @@
+@page "/addservices"
+@using Microsoft.EntityFrameworkCore
+@using TrashService.Data
+@using TrashService.Models
+@inject AppDbContext db
+@inject NavigationManager nav
+
+<h3>Add Services</h3>
+
+<label>Date: <input type="date" @bind="serviceDate" /></label>
+
+@if (customers != null)
+{
+    <EditForm Model="this" OnValidSubmit="AddService">
+        @foreach (var customer in customers)
+        {
+            <div>
+                <input type="checkbox" @bind="selectedCustomers[customer.Id]" />
+                @customer.Name
+            </div>
+        }
+        <button type="submit">Add Services</button>
+    </EditForm>
+}
+
+@code {
+    private DateTime serviceDate = DateTime.Today;
+    private List<Models.Customer> customers;
+    private Dictionary<int, bool> selectedCustomers = new();
+    private decimal price = 2m; // Price per service
+
+    protected override async Task OnInitializedAsync()
+    {
+        customers = await db.Customers.ToListAsync();
+        foreach (var customer in customers)
+        {
+            selectedCustomers[customer.Id] = false;
+        }
+    }
+
+    private async Task AddService()
+    {
+        foreach (var kvp in selectedCustomers)
+        {
+            if (kvp.Value)
+            {
+                var customer = customers.First(c => c.Id == kvp.Key);
+                db.Services.Add(new Service { Date = serviceDate, CustomerId = customer.Id });
+                customer.Balance += price; // Increase balance (reduce credit or add debt)
+            }
+        }
+        await db.SaveChangesAsync();
+        nav.NavigateTo("/services");
+    }
+}

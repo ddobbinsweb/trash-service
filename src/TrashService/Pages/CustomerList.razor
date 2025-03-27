@@ -1,0 +1,57 @@
+@page "/customers"
+@using Microsoft.EntityFrameworkCore
+@using TrashService.Data
+@inject AppDbContext db
+
+<h3>Customers</h3>
+<a href="/addcustomer">Add Customer</a>
+
+<table class="table table-bordered table-responsive">
+    <thead>
+    <tr>
+        <th>Name</th>
+        <th>Payment Type</th>
+        <th>Balance</th>
+        <th>Status</th>
+        <th>Actions</th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var customer in customers)
+    {
+        <tr>
+            <td>@customer.Name</td>
+            <td>@customer.PaymentType</td>
+            <td>@customer.Balance.ToString("C")</td>
+            <td>
+                @if (customer.Balance < 0)
+                {
+                    var servicesLeft = (int)Math.Floor(Math.Abs(customer.Balance) / 2m);
+                    <span style="color: green;">Credit: @customer.Balance.ToString("C") (@servicesLeft services)</span>
+                }
+                else if (customer.Balance > 0)
+                {
+                    <span style="color: red;">Amount owed: @customer.Balance.ToString("C")</span>
+                }
+                else
+                {
+                    <span>Balance: $0</span>
+                }
+            </td>
+            <td>
+                <a href="/addpayment/@customer.Id">Add Payment</a> |
+                <a href="/invoice/@customer.Id">View Invoice</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+
+@code {
+    private List<Models.Customer> customers;
+
+    protected override async Task OnInitializedAsync()
+    {
+        customers = await db.Customers.ToListAsync();
+    }
+}

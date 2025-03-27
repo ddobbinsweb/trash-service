@@ -1,0 +1,45 @@
+@page "/addpayment/{CustomerId:int?}"
+@inject AppDbContext db
+@inject NavigationManager nav
+
+<h3>Add Payment</h3>
+
+<EditForm Model="payment" OnValidSubmit="SavePayment">
+    <label>Customer: 
+        <select @bind="payment.CustomerId">
+            @foreach (var customer in customers)
+            {
+                <option value="@customer.Id" selected="@(customer.Id == payment.CustomerId)">@customer.Name</option>
+            }
+        </select>
+    </label><br />
+    <label>Amount: <input type="number" step="0.01" @bind="payment.Amount" /></label><br />
+    <label>Date: <input type="date" @bind="payment.Date" /></label><br />
+    <button type="submit">Save</button>
+</EditForm>
+
+@code {
+    [Parameter]
+    public int? CustomerId { get; set; }
+
+    private Payment payment = new Payment { Date = DateTime.Today };
+    private List<Customer> customers;
+
+    protected override async Task OnInitializedAsync()
+    {
+        customers = await db.Customers.ToListAsync();
+        if (CustomerId.HasValue)
+        {
+            payment.CustomerId = CustomerId.Value;
+        }
+    }
+
+    private async Task SavePayment()
+    {
+        var customer = await db.Customers.FindAsync(payment.CustomerId);
+        customer.Balance -= payment.Amount; // Reduce balance (add credit or reduce debt)
+        db.Payments.Add(payment);
+        await db.SaveChangesAsync();
+        nav.NavigateTo("/customers");
+    }
+}

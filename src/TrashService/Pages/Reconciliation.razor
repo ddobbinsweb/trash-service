@@ -1,0 +1,87 @@
+@page "/reconciliation"
+@using TrashService.Enums
+@inject AppDbContext db
+
+<h3>Monthly Reconciliation</h3>
+
+<div>
+    <label>Select Month: 
+        <input type="month" @bind="selectedMonth" @bind:event="oninput" />
+    </label>
+    <button @onclick="LoadReconciliation">Load</button>
+</div>
+
+@if (reconciliationLoaded)
+{
+    <h4>Reconciliation for @selectedMonth.ToString("MMMM yyyy")</h4>
+    
+    <table>
+        <tr>
+            <th>Total Services Provided</th>
+            <td>@totalServices ($@{ (totalServices * price).ToString("F2");})</td>
+        </tr>
+        <tr>
+            <th>Total Payments Received</th>
+            <td>$@totalPayments.ToString("F2")</td>
+        </tr>
+        <tr>
+            <th>Expected Postpay Collection</th>
+            <td>$@expectedPostpayCollection.ToString("F2")</td>
+        </tr>
+        <tr>
+            <th>Difference (Collected - Expected Postpay)</th>
+            <td style="@(difference >= 0 ? "color: green;" : "color: red;")">
+                $@difference.ToString("F2")
+                @if (difference >= 0)
+                {
+                    <span>(Surplus or Balanced)</span>
+                }
+                else
+                {
+                    <span>(Shortfall)</span>
+                }
+            </td>
+        </tr>
+    </table>
+}
+
+@code {
+    private DateTime selectedMonth = DateTime.Today;
+    private bool reconciliationLoaded = false;
+    private int totalServices;
+    private decimal totalPayments;
+    private decimal expectedPostpayCollection;
+    private decimal difference;
+    private decimal price = 2m; // Price per service
+
+    private async Task LoadReconciliation()
+    {
+        // Define the start and end of the selected month
+        var startOfMonth = new DateTime(selectedMonth.Year, selectedMonth.Month, 1);
+        var endOfMonth = startOfMonth.AddMonths(1).AddDays(-1);
+
+        // Total services provided in the month
+        totalServices = await db.Services
+            .Where(s => s.Date >= startOfMonth && s.Date <= endOfMonth)
+            .CountAsync();
+
+        // Total payments received in the month
+        totalPayments = await db.Payments
+            .Where(p => p.Date >= startOfMonth && p.Date <= endOfMonth)
+            .SumAsync(p => p.Amount);
+
+        // Expected collection from postpay customers (services × price)
+        expectedPostpayCollection = await db.Services
+            .Where(s => s.Date >= startOfMonth && s.Date <= endOfMonth)
+            .Join(db.Customers.Where(c => c.PaymentType == PaymentType.Postpay),
+                  s => s.CustomerId,
+                  c => c.Id,
+                  (s, c) => s)
+            .CountAsync() * price;
+
+        // Difference: Total payments minus expected postpay collection
+        difference = totalPayments - expectedPostpayCollection;
+
+        reconciliationLoaded = true;
+    }
+}

@@ -1,0 +1,30 @@
+@page "/services"
+@using Microsoft.EntityFrameworkCore
+@using TrashService.Data
+@using TrashService.Models
+@inject AppDbContext db
+
+<h3>Services</h3>
+<a href="/addservices">Add Services</a>
+
+@foreach (var date in serviceDates)
+{
+    <h4>@date.ToShortDateString()</h4>
+    <ul>
+        @foreach (var service in services.Where(s => s.Date.Date == date))
+        {
+            <li>@service.Customer.Name</li>
+        }
+    </ul>
+}
+
+@code {
+    private List<Service> services;
+    private IEnumerable<DateTime> serviceDates;
+
+    protected override async Task OnInitializedAsync()
+    {
+        services = await db.Services.Include(s => s.Customer).ToListAsync();
+        serviceDates = services.Select(s => s.Date.Date).Distinct();
+    }
+}
