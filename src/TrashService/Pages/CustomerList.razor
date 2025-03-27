@@ -1,13 +1,15 @@
-@page "/customers"
+@page "/customerlist"
 @using Microsoft.EntityFrameworkCore
 @using TrashService.Data
 @inject AppDbContext db
 
 <h3>Customers</h3>
-<a href="/addcustomer">Add Customer</a>
+
+       
+
 
 <table class="table table-bordered table-responsive">
-    <thead>
+    <thead class="bg-gradient">
     <tr>
         <th>Name</th>
         <th>Payment Type</th>
@@ -17,7 +19,7 @@
     </tr>
     </thead>
     <tbody>
-    @foreach (var customer in customers)
+    @foreach (var customer in _customers)
     {
         <tr>
             <td>@customer.Name</td>
@@ -46,12 +48,13 @@
     }
     </tbody>
 </table>
+<div class="align-content-md-end"> <a href="/addcustomer">Add Customer</a></div>
 
 @code {
-    private List<Models.Customer> customers;
+    private List<Customer> _customers = [];
 
     protected override async Task OnInitializedAsync()
     {
-        customers = await db.Customers.ToListAsync();
+        _customers = await db.Customers.ToListAsync();
     }
 }

@@ -1,19 +1,13 @@
-using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.Components.Web;
-using Microsoft.EntityFrameworkCore;
-using TrashService.Data;
-
 var builder = WebApplication.CreateBuilder(args);
 
+var config = builder.Configuration;
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
-builder.Services.AddHealthChecks();
-
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite("Data Source=trashservice.db"));
+builder.Services.AddAppDbContext(config.GetConnectionString("DefaultConnection"));
 
 var app = builder.Build();
+
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -28,9 +22,13 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
-app.UseHealthChecks("/health");
 
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
 
+
+var  factory = app.Services.GetRequiredService<IServiceScopeFactory>();
+var scope = factory.CreateScope();
+var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+db.Database.Migrate();
 app.Run();

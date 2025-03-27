@@ -24,7 +24,7 @@
 }
 
 @code {
-    private DateTime serviceDate = DateTime.Today;
+    private DateTime serviceDate = DateTime.UtcNow;
     private List<Models.Customer> customers;
     private Dictionary<int, bool> selectedCustomers = new();
     private decimal price = 2m; // Price per service

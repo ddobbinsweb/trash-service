@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using TrashService.Models;
-
+using Npgsql;
 namespace TrashService.Data;
 
-public class AppDbContext : DbContext
+public class AppDbContext: DbContext
 {
     public DbSet<Customer> Customers { get; set; }
     public DbSet<Service> Services { get; set; }
@@ -12,9 +12,7 @@ public class AppDbContext : DbContext
     public AppDbContext(DbContextOptions<AppDbContext> options)
     : base(options)
     {
+      
     }
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        optionsBuilder.UseSqlite("Data Source=trashservice.db");
-    }
+ 
 }
