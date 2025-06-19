@@ -1,12 +1,17 @@
 var builder = WebApplication.CreateBuilder(args);
 
+builder.AddServiceDefaults();
+
 var config = builder.Configuration;
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
-builder.Services.AddAppDbContext(config.GetConnectionString("DefaultConnection"));
+builder.AddNpgsqlDataSource("trash-services-db");
+builder.Services.AddAppDbContext(config.GetConnectionString("trash-services-db"));
 
 var app = builder.Build();
+
+app.MapDefaultEndpoints();
 
 
 // Configure the HTTP request pipeline.
