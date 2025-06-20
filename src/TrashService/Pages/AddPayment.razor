@@ -4,7 +4,7 @@
 
 <h3>Add Payment</h3>
 
-<EditForm Model="payment" OnValidSubmit="SavePayment">
+<EditForm Model="payment" OnValidSubmit="SavePayment" >
     <label>Customer: 
         <select @bind="payment.CustomerId">
             @foreach (var customer in customers)
@@ -14,16 +14,20 @@
         </select>
     </label><br />
     <label>Amount: <input type="number" step="0.01" @bind="payment.Amount" /></label><br />
-    <label>Date: <input type="date" @bind="payment.Date" /></label><br />
-    <button type="submit">Save</button>
+    <label>Date: <input type="date" @bind="payment.Date"  /></label><br />
+    <div class="btn-group">
+        <button class="btn btn-secondary">Cancel</button>
+        <button class="btn btn-primary" type="submit">Save</button>
+  </div>
 </EditForm>
 
 @code {
+
     [Parameter]
     public int? CustomerId { get; set; }
 
     private Payment payment = new Payment { Date = DateTime.Today };
-    private List<Customer> customers;
+    private List<Customer> customers =[];
 
     protected override async Task OnInitializedAsync()
     {
@@ -31,15 +35,17 @@
         if (CustomerId.HasValue)
         {
             payment.CustomerId = CustomerId.Value;
+            payment.Amount = 2;
         }
     }
-
     private async Task SavePayment()
     {
         var customer = await db.Customers.FindAsync(payment.CustomerId);
+
+        payment.Date = payment.Date.ToUniversalTime();
         customer.Balance -= payment.Amount; // Reduce balance (add credit or reduce debt)
         db.Payments.Add(payment);
         await db.SaveChangesAsync();
-        nav.NavigateTo("/customers");
+        nav.NavigateTo("/customerlist");
     }
 }
