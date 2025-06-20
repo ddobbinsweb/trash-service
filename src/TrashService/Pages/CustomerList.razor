@@ -1,17 +1,17 @@
 @page "/customerlist"
 @using Microsoft.EntityFrameworkCore
 @using TrashService.Data
+@using TrashService.Models
+@using TrashService.Enums
 @inject AppDbContext db
 
 <h3>Customers</h3>
-
-       
-
 
 <table class="table table-bordered table-responsive">
     <thead class="bg-gradient">
     <tr>
         <th>Name</th>
+        <th>Address</th>
         <th>Payment Type</th>
         <th>Balance</th>
         <th>Status</th>
@@ -21,40 +21,113 @@
     <tbody>
     @foreach (var customer in _customers)
     {
-        <tr>
-            <td>@customer.Name</td>
-            <td>@customer.PaymentType</td>
-            <td>@customer.Balance.ToString("C")</td>
-            <td>
-                @if (customer.Balance < 0)
-                {
-                    var servicesLeft = (int)Math.Floor(Math.Abs(customer.Balance) / 2m);
-                    <span style="color: green;">Credit: @customer.Balance.ToString("C") (@servicesLeft services)</span>
-                }
-                else if (customer.Balance > 0)
-                {
-                    <span style="color: red;">Amount owed: @customer.Balance.ToString("C")</span>
-                }
-                else
-                {
-                    <span>Balance: $0</span>
-                }
-            </td>
-            <td>
-                <a class="btn btn-primary" href="/addpayment/@customer.Id">Add Payment</a>
-                <a class="btn btn-primary" href="/invoice/@customer.Id">View Invoice</a>
-            </td>
-        </tr>
+        if (_editCustomer != null && _editCustomer.Id == customer.Id)
+        {
+            <tr>
+                <td><input class="form-control" @bind="_editCustomer.Name" /></td>
+                <td><input class="form-control" @bind="_editCustomer.Address" /></td>
+                <td>
+                    <select class="form-control" @bind="_editCustomer.PaymentType">
+                        <option value="@PaymentType.Prepay">Prepay</option>
+                        <option value="@PaymentType.Postpay">Postpay</option>
+                    </select>
+                </td>
+                <td>@customer.Balance.ToString("C")</td>
+                <td>
+                    @if (customer.Balance < 0)
+                    {
+                        var servicesLeft = (int)Math.Floor(Math.Abs(customer.Balance) / 2m);
+                        <span style="color: green;">Credit: @customer.Balance.ToString("C") (@servicesLeft services)</span>
+                    }
+                    else if (customer.Balance > 0)
+                    {
+                        <span style="color: red;">Amount owed: @customer.Balance.ToString("C")</span>
+                    }
+                    else
+                    {
+                        <span>Balance: $0</span>
+                    }
+                </td>
+                <td>
+                    <button class="btn btn-success btn-sm" @onclick="SaveEditCustomer">Save</button>
+                    <button class="btn btn-secondary btn-sm" @onclick="CancelEdit">Cancel</button>
+                </td>
+            </tr>
+        }
+        else
+        {
+            <tr>
+                <td>@customer.Name</td>
+                <td>@customer.Address</td>
+                <td>@customer.PaymentType</td>
+                <td>@customer.Balance.ToString("C")</td>
+                <td>
+                    @if (customer.Balance < 0)
+                    {
+                        var servicesLeft = (int)Math.Floor(Math.Abs(customer.Balance) / 2m);
+                        <span style="color: green;">Credit: @customer.Balance.ToString("C") (@servicesLeft services)</span>
+                    }
+                    else if (customer.Balance > 0)
+                    {
+                        <span style="color: red;">Amount owed: @customer.Balance.ToString("C")</span>
+                    }
+                    else
+                    {
+                        <span>Balance: $0</span>
+                    }
+                </td>
+                <td>
+                    <a class="btn btn-primary btn-sm" href="/addpayment/@customer.Id">Add Payment</a>
+                    <a class="btn btn-primary btn-sm" href="/invoice/@customer.Id">View Invoice</a>
+                    <button class="btn btn-warning btn-sm" @onclick="() => EditCustomer(customer)">Edit</button>
+                </td>
+            </tr>
+        }
     }
     </tbody>
 </table>
 <div class="align-content-md-end"> <a class="btn btn-primary" href="/addcustomer">Add Customer</a></div>
 
 @code {
-    private List<Customer> _customers = [];
+    private List<Customer> _customers = new();
+    private Customer? _editCustomer;
 
     protected override async Task OnInitializedAsync()
     {
         _customers = await db.Customers.ToListAsync();
+    }
+
+    private void EditCustomer(Customer customer)
+    {
+        _editCustomer = new Customer
+        {
+            Id = customer.Id,
+            Name = customer.Name,
+            Address = customer.Address,
+            PaymentType = customer.PaymentType,
+            Balance = customer.Balance
+        };
+    }
+
+    private void CancelEdit()
+    {
+        _editCustomer = null;
+    }
+
+    private async Task SaveEditCustomer()
+    {
+        if (_editCustomer != null)
+        {
+            var customer = await db.Customers.FindAsync(_editCustomer.Id);
+            if (customer != null)
+            {
+                customer.Name = _editCustomer.Name;
+                customer.Address = _editCustomer.Address;
+                customer.PaymentType = _editCustomer.PaymentType;
+                await db.SaveChangesAsync();
+                _customers = await db.Customers.ToListAsync();
+            }
+            _editCustomer = null;
+        }
     }
 }
