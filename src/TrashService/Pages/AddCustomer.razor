@@ -1,5 +1,4 @@
 @page "/addcustomer"
-@using TrashService.Data
 @using TrashService.Enums
 @inject AppDbContext db
 @inject NavigationManager nav
@@ -7,19 +6,27 @@
 <h3>Add Customer</h3>
 
 <EditForm Model="customer" OnValidSubmit="SaveCustomer">
-    <label>Name: <input @bind="customer.Name" /></label><br />
-    <label>Address: <input @bind="customer.Address" /></label><br />
-    <label>Payment Type: 
-        <select @bind="customer.PaymentType">
+    <div class="form-group">
+    <label>Name: <input class="form-control"  @bind="customer.Name" /></label><br />
+    <label>Address: <input class="form-control" @bind="customer.Address" /></label><br />
+    <label>
+        Payment Type:
+        <select class="form-control" @bind="customer.PaymentType">
             <option value="@PaymentType.Prepay">Prepay</option>
             <option value="@PaymentType.Postpay">Postpay</option>
         </select>
-    </label><br />
-    <button type="submit">Save</button>
+    </label>
+    </div>
+    <div class="btn-group" >
+        <button class="btn btn-secondary">Cancel</button>
+        <button class="btn btn-outline-secondary" type="reset">Reset</button>
+        <button class="btn btn-primary" type="submit">Save</button>
+    </div>
+    
 </EditForm>
 
 @code {
-    private Models.Customer customer = new ();
+    private Models.Customer customer = new();
 
     private async Task SaveCustomer()
     {
