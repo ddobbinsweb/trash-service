@@ -41,14 +41,14 @@
                 }
             </td>
             <td>
-                <a href="/addpayment/@customer.Id">Add Payment</a> |
-                <a href="/invoice/@customer.Id">View Invoice</a>
+                <a class="btn btn-primary" href="/addpayment/@customer.Id">Add Payment</a>
+                <a class="btn btn-primary" href="/invoice/@customer.Id">View Invoice</a>
             </td>
         </tr>
     }
     </tbody>
 </table>
-<div class="align-content-md-end"> <a href="/addcustomer">Add Customer</a></div>
+<div class="align-content-md-end"> <a class="btn btn-primary" href="/addcustomer">Add Customer</a></div>
 
 @code {
     private List<Customer> _customers = [];
