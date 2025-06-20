@@ -43,41 +43,7 @@ else
 }
 
 <style>
-    .invoice-container {
-        max-width: 800px;
-        margin: 20px auto;
-        padding: 20px;
-        border: 1px solid #ccc;
-    }
-    .invoice-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
-    .invoice-table th, .invoice-table td {
-        border: 1px solid #ddd;
-        padding: 8px;
-        text-align: left;
-    }
-    .invoice-table tfoot th {
-        text-align: right;
-    }
-    @@media print {
-        body * {
-            visibility: hidden;
-        }
-        .invoice-container, .invoice-container * {
-            visibility: visible;
-        }
-        .invoice-container {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-        }
-        button {
-            display: none; /* Hide the print button when printing */
-        }
-    }
+
 </style>
 
 @code {
@@ -85,7 +51,7 @@ else
     public int CustomerId { get; set; }
 
     private Customer customer;
-    private List<Service> services;
+    private List<Service> services = [];
     private decimal price = 2m; // Price per service
     private decimal total;
 
