@@ -23,7 +23,7 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 9.0.x
-        dotnet-quality: 'qa'
+        dotnet-quality: 'ga'
 
     - name: Restore dependencies
       run: dotnet restore ${{ env.PROJECT_SOLUTION }}
