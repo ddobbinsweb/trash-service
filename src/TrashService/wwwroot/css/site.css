@@ -90,7 +90,7 @@ a, .btn-link {
         text-align: right;
     }
 
-@@media print {
+@media print {
     body * {
         visibility: hidden;
     }
