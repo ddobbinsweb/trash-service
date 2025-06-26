@@ -45,11 +45,21 @@
             if (kvp.Value)
             {
                 var customer = customers.First(c => c.Id == kvp.Key);
-                db.Services.Add(new Service { Date = serviceDate, CustomerId = customer.Id });
+                db.Services.Add(new Service { Date = serviceDate.ToUniversalTime(), CustomerId = customer.Id, Customer = customer});
                 customer.Balance += price; // Increase balance (reduce credit or add debt)
             }
         }
-        await db.SaveChangesAsync();
+
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+       
         nav.NavigateTo("/services");
     }
 }
