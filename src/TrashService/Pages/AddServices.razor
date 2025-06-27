@@ -24,18 +24,32 @@
 }
 
 @code {
-    private DateTime serviceDate = DateTime.UtcNow;
+    private DateTime serviceDate;
     private List<Models.Customer> customers = [];
     private Dictionary<int, bool> selectedCustomers = new();
     private decimal price = 2m; // Price per service
 
     protected override async Task OnInitializedAsync()
     {
+        // Set the initial date to the next Wednesday
+        serviceDate = GetNextWednesday();
+        
         customers = await db.Customers.ToListAsync();
         foreach (var customer in customers)
         {
             selectedCustomers[customer.Id] = false;
         }
+    }
+
+    private DateTime GetNextWednesday()
+    {
+        var today = DateTime.UtcNow.Date;
+        int daysUntilWednesday = ((int)DayOfWeek.Wednesday - (int)today.DayOfWeek + 7) % 7;
+        // If today is Wednesday and it's not past end of day, use today
+        if (daysUntilWednesday == 0 && DateTime.UtcNow.TimeOfDay.TotalHours < 23)
+            return today;
+        // Otherwise, get next Wednesday
+        return today.AddDays(daysUntilWednesday == 0 ? 7 : daysUntilWednesday);
     }
 
     private async Task AddService()
