@@ -1,6 +1,3 @@
-using TrashService.Pages;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 namespace TrashService.Data;
 
 public static class AppDbContextExtensions

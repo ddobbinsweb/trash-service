@@ -1,6 +1,3 @@
-using Microsoft.EntityFrameworkCore;
-using TrashService.Models;
-using Npgsql;
 namespace TrashService.Data;
 
 public class AppDbContext: DbContext
