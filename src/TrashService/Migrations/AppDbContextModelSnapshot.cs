@@ -77,6 +77,37 @@ namespace TrashService.Migrations
                     b.ToTable("Payments");
                 });
 
+            modelBuilder.Entity("TrashService.Models.PaymentTransaction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("TransactionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.ToTable("PaymentTransactions");
+                });
+
             modelBuilder.Entity("TrashService.Models.Service", b =>
                 {
                     b.Property<int>("Id")
@@ -91,6 +122,18 @@ namespace TrashService.Migrations
                     b.Property<DateTime>("Date")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("IsPaid")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("PaymentDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PaymentReference")
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("numeric");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CustomerId");
@@ -103,7 +146,18 @@ namespace TrashService.Migrations
             modelBuilder.Entity("TrashService.Models.Payment", b =>
                 {
                     b.HasOne("TrashService.Models.Customer", "Customer")
-                        .WithMany("Payments")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+                });
+
+            modelBuilder.Entity("TrashService.Models.PaymentTransaction", b =>
+                {
+                    b.HasOne("TrashService.Models.Customer", "Customer")
+                        .WithMany()
                         .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -124,8 +178,6 @@ namespace TrashService.Migrations
 
             modelBuilder.Entity("TrashService.Models.Customer", b =>
                 {
-                    b.Navigation("Payments");
-
                     b.Navigation("Services");
                 });
 #pragma warning restore 612, 618

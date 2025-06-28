@@ -4,7 +4,11 @@ namespace TrashService.Models;
 public class Service
 {
     public int Id { get; set; }
-    public DateTime Date { get; set; } // Date of service (Wednesdays)
     public int CustomerId { get; set; }
-    public Customer Customer { get; set; } = null!; // Navigation property
+    public Customer Customer { get; set; } = null!;
+    public DateTime Date { get; set; }
+    public decimal Price { get; set; }
+    public bool IsPaid { get; set; }
+    public DateTime? PaymentDate { get; set; }
+    public string? PaymentReference { get; set; }
 }

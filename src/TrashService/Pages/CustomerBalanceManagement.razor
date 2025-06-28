@@ -1,0 +1,251 @@
+@page "/customer/balance/{CustomerId:int}"
+@using System.ComponentModel.DataAnnotations
+@using TrashService.Services
+@inject CustomerBalanceService BalanceService
+@inject AppDbContext DbContext
+@inject NavigationManager NavigationManager
+
+<div class="container">
+    <div class="row mb-4">
+        <div class="col">
+            <h3>Customer Balance Management</h3>
+            @if (customer != null)
+            {
+                <h4>@customer.Name</h4>
+                <div class="card">
+                    <div class="card-body">
+                        <h5>Current Balance: <span class="@(customer.Balance >= 0 ? "text-success" : "text-danger")">
+                            $@customer.Balance.ToString("F2")
+                        </span></h5>
+                        <p>Payment Type: @customer.PaymentType</p>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    Add Prepayment
+                </div>
+                <div class="card-body">
+                    <EditForm Model="@paymentModel" OnValidSubmit="HandlePrepayment">
+                        <DataAnnotationsValidator />
+                        <ValidationSummary />
+
+                        <div class="mb-3">
+                            <label class="form-label">Amount</label>
+                            <InputNumber class="form-control" @bind-Value="paymentModel.Amount" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Note</label>
+                            <InputText class="form-control" @bind-Value="paymentModel.Note" />
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Add Payment</button>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    Previous Services
+                </div>
+                <div class="card-body">
+                    @if (previousServices.Any())
+                    {
+                        <table class="table table-sm">
+                            <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Price</th>
+                                <th>Status</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var service in previousServices)
+                            {
+                                <tr>
+                                    <td>@service.Date.ToShortDateString()</td>
+                                    <td>$@service.Price.ToString("F2")</td>
+                                    <td>
+                                        @if (service.IsPaid)
+                                        {
+                                            <span class="badge bg-success">Paid</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning">Pending</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <p>No upcoming services</p>
+                    }
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    Upcoming Services
+                </div>
+                <div class="card-body">
+                    @if (upcomingServices.Any())
+                    {
+                        <table class="table table-sm">
+                            <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Price</th>
+                                <th>Status</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var service in upcomingServices)
+                            {
+                                <tr>
+                                    <td>@service.Date.ToShortDateString()</td>
+                                    <td>$@service.Price.ToString("F2")</td>
+                                    <td>
+                                        @if (service.IsPaid)
+                                        {
+                                            <span class="badge bg-success">Paid</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning">Pending</span>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <p>No upcoming services</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col">
+            <div class="card">
+                <div class="card-header">
+                    Transaction History
+                </div>
+                <div class="card-body">
+                    @if (transactions.Any())
+                    {
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var transaction in transactions)
+                                {
+                                    <tr>
+                                        <td>@transaction.TransactionDate.ToLocalTime().ToString("g")</td>
+                                        <td>@transaction.Type</td>
+                                        <td class="@(transaction.Amount >= 0 ? "text-success" : "text-danger")">
+                                            $@transaction.Amount.ToString("F2")
+                                        </td>
+                                        <td>@transaction.Description</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                    else
+                    {
+                        <p>No transaction history</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int CustomerId { get; set; }
+
+    private Customer? customer;
+    private List<PaymentTransaction> transactions = new();
+    private List<Service> previousServices = new();
+    private List<Service> upcomingServices = new();
+    private PaymentModel paymentModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCustomerData();
+    }
+
+    private async Task LoadCustomerData()
+    {
+        customer = await DbContext.Customers
+            .FirstOrDefaultAsync(c => c.Id == CustomerId);
+
+        if (customer != null)
+        {
+            transactions = await DbContext.PaymentTransactions
+                .Where(t => t.CustomerId == CustomerId)
+                .OrderByDescending(t => t.TransactionDate)
+                .ToListAsync();
+            
+            previousServices = await DbContext.Services
+                .Where(x => x.CustomerId == CustomerId && x.Date <= DateTime.UtcNow)
+                .OrderByDescending(x => x.Date)
+                .Take(5)
+                .ToListAsync();
+            
+            upcomingServices = await DbContext.Services
+                .Where(s => s.CustomerId == CustomerId && s.Date >= DateTime.UtcNow)
+                .OrderBy(s => s.Date)
+                .ToListAsync();
+        }
+    }
+
+    private async Task HandlePrepayment()
+    {
+        if (paymentModel.Amount <= 0)
+            return;
+
+        try
+        {
+            await BalanceService.AddPrepaymentAsync(CustomerId, paymentModel.Amount);
+            paymentModel = new PaymentModel(); // Reset the form
+            await LoadCustomerData(); // Refresh the data
+        }
+        catch (Exception ex)
+        {
+            // Handle error (you might want to show an error message to the user)
+            Console.WriteLine(ex.Message);
+        }
+    }
+
+    private class PaymentModel
+    {
+        [Required]
+        [Range(0.01, double.MaxValue, ErrorMessage = "Amount must be greater than 0")]
+        public decimal Amount { get; set; }
+
+        public string? Note { get; set; }
+    }
+}

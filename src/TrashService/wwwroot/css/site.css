@@ -110,3 +110,10 @@ a, .btn-link {
         display: none; /* Hide the print button when printing */
     }
 }
+.transaction-amount-positive {
+    color: #28a745;
+}
+
+.transaction-amount-negative {
+    color: #dc3545;
+}

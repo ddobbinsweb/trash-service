@@ -11,5 +11,4 @@ public class Customer
     public PaymentType PaymentType { get; set; } // Prepay or Postpay
     public decimal Balance { get; set; } // Negative for credit, positive for debt
     public ICollection<Service> Services { get; set; } = [];
-    public ICollection<Payment> Payments { get; set; } = [];
 }

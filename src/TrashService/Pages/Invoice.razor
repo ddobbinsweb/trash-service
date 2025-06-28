@@ -6,7 +6,7 @@
 @if (customer != null)
 {
     <div class="invoice-container">
-        <h4>Invoice for @customer.Name</h4>
+        <h4>Unpaid Invoice for @customer.Name</h4>
         <p>Address: @customer.Address</p>
         <p>Payment Type: @customer.PaymentType</p>
 
@@ -42,10 +42,6 @@ else
     <p>Customer not found.</p>
 }
 
-<style>
-
-</style>
-
 @code {
     [Parameter]
     public int CustomerId { get; set; }
@@ -61,7 +57,7 @@ else
         if (customer != null)
         {
             services = await db.Services
-                .Where(s => s.CustomerId == CustomerId)
+                .Where(s => s.CustomerId == CustomerId && !s.IsPaid) // Added filter for unpaid services
                 .OrderBy(s => s.Date)
                 .ToListAsync();
             total = services.Count * price;

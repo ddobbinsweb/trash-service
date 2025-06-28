@@ -1,133 +1,250 @@
 @page "/customerlist"
-@using Microsoft.EntityFrameworkCore
-@using TrashService.Data
-@using TrashService.Models
-@using TrashService.Enums
-@inject AppDbContext db
+@using TrashService.Services
+@inject AppDbContext DbContext
+@inject CustomerBalanceService BalanceService
 
-<h3>Customers</h3>
+<h3>Customer List</h3>
 
-<table class="table table-bordered table-responsive">
-    <thead class="bg-gradient">
-    <tr>
-        <th>Name</th>
-        <th>Address</th>
-        <th>Payment Type</th>
-        <th>Balance</th>
-        <th>Status</th>
-        <th>Actions</th>
-    </tr>
-    </thead>
-    <tbody>
-    @foreach (var customer in _customers)
+@* Add this right after the "Add New Customer" button *@
+<div class="mb-3">
+    <a href="addcustomer" class="btn btn-primary">Add New Customer</a>
+    
+    <button class="btn btn-success ms-2" @onclick="OpenDatePickerForSelected">
+        <span class="oi oi-plus"></span> Add Service to Selected
+    </button>
+    
+</div>
+
+@if (customers == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" @onchange="@(e => SelectAllCustomers(e.Value is bool b && b))"/></th>
+                    <th>Name</th>
+                    <th>Address</th>
+                    <th>Payment Type</th>
+                    <th>Balance</th>
+                    <th>Last Service</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var customer in customers)
+                {
+                    <tr>
+                        <td><input type="checkbox" @bind="selectedCustomerIds[customer.Id]"/></td>
+                        <td>@customer.Name</td>
+                        <td>@customer.Address</td>
+                        <td>@customer.PaymentType</td>
+                        <td class="@(customer.Balance >= 0 ? "text-success" : "text-danger")">
+                            $@customer.Balance.ToString("F2")
+                        </td>
+                        <td>
+                            @if (customer.Services.Any())
+                            {
+                                var lastService = customer.Services.MaxBy(s => s.Date);
+                                @lastService?.Date.ToShortDateString()
+                                <br/>
+                                <small class="@(lastService?.IsPaid == true ? "text-success" : "text-warning")">
+                                    @(lastService?.IsPaid == true ? "Paid" : "Pending")
+                                </small>
+                            }
+                            else
+                            {
+                                <small class="text-muted">No services</small>
+                            }
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="@($"customer/balance/{customer.Id}")" class="btn btn-primary btn-sm">
+                                    <span class="oi oi-dollar"></span> Balance
+                                </a>
+                                <button class="btn btn-info btn-sm" @onclick="() => ShowTransactions(customer.Id)">
+                                    <span class="oi oi-list"></span> History
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    @if (selectedCustomerId == customer.Id)
+                    {
+                        <tr>
+                            <td colspan="6">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h5>Transaction History</h5>
+                                        @if (transactions.Any())
+                                        {
+                                            <table class="table table-sm">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Date</th>
+                                                        <th>Type</th>
+                                                        <th>Amount</th>
+                                                        <th>Description</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach (var transaction in transactions)
+                                                    {
+                                                        <tr class="@(transaction.Id == 0 ? "table-warning" : "")">
+                                                            <td>@transaction.TransactionDate.ToLocalTime().ToString("g")</td>
+                                                            <td>
+                                                                @if (transaction.Id == 0)
+                                                                {
+                                                                    <span class="badge bg-warning">Pending</span>
+                                                                }
+                                                                else
+                                                                {
+                                                                    @transaction.Type
+                                                                }
+                                                            </td>
+                                                            <td class="@(transaction.Amount >= 0 ? "text-success" : "text-danger")">
+                                                                $@transaction.Amount.ToString("F2")
+                                                            </td>
+                                                            <td>@transaction.Description</td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        }
+                                        else
+                                        {
+                                            <p>No transactions found.</p>
+                                        }
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@* Add this modal component at the end of the file, before @code section *@
+<div class="modal @(isDatePickerModalOpen ? "show d-block" : "d-none")" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Select Service Date</h5>
+                <button type="button" class="btn-close" @onclick="CloseDatePicker"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="serviceDate" class="form-label">Service Date</label>
+                    <input type="date" 
+                           id="serviceDate"
+                           class="form-control" 
+                           @bind="selectedServiceDate" />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" @onclick="CloseDatePicker">Cancel</button>
+                <button type="button" class="btn btn-primary" @onclick="SaveServiceDate">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (isDatePickerModalOpen)
+{
+    <div class="modal-backdrop show"></div>
+}
+
+@* Add this to the @code section *@
+@code {
+    private List<Customer>? customers;
+    private List<PaymentTransaction> transactions = new();
+    private int? selectedCustomerId;
+    private Dictionary<int, bool> selectedCustomerIds = new();
+    private bool isDatePickerModalOpen;
+    private DateTime selectedServiceDate = DateTime.Today.AddDays(7);
+    private List<int> customersForService = new();
+
+    private void SelectAllCustomers(bool selected)
     {
-        if (_editCustomer != null && _editCustomer.Id == customer.Id)
+        if (customers != null)
         {
-            <tr>
-                <td><input class="form-control" @bind="_editCustomer.Name" /></td>
-                <td><input class="form-control" @bind="_editCustomer.Address" /></td>
-                <td>
-                    <select class="form-control" @bind="_editCustomer.PaymentType">
-                        <option value="@PaymentType.Prepay">Prepay</option>
-                        <option value="@PaymentType.Postpay">Postpay</option>
-                    </select>
-                </td>
-                <td>@customer.Balance.ToString("C")</td>
-                <td>
-                    @if (customer.Balance < 0)
-                    {
-                        var servicesLeft = (int)Math.Floor(Math.Abs(customer.Balance) / 2m);
-                        <span style="color: green;">Credit: @customer.Balance.ToString("C") (@servicesLeft services)</span>
-                    }
-                    else if (customer.Balance > 0)
-                    {
-                        <span style="color: red;">Amount owed: @customer.Balance.ToString("C")</span>
-                    }
-                    else
-                    {
-                        <span>Balance: $0</span>
-                    }
-                </td>
-                <td>
-                    <button class="btn btn-success btn-sm" @onclick="SaveEditCustomer">Save</button>
-                    <button class="btn btn-secondary btn-sm" @onclick="CancelEdit">Cancel</button>
-                </td>
-            </tr>
-        }
-        else
-        {
-            <tr>
-                <td>@customer.Name</td>
-                <td>@customer.Address</td>
-                <td>@customer.PaymentType</td>
-                <td>@customer.Balance.ToString("C")</td>
-                <td>
-                    @if (customer.Balance < 0)
-                    {
-                        var servicesLeft = (int)Math.Floor(Math.Abs(customer.Balance) / 2m);
-                        <span style="color: green;">Credit: @customer.Balance.ToString("C") (@servicesLeft services)</span>
-                    }
-                    else if (customer.Balance > 0)
-                    {
-                        <span style="color: red;">Amount owed: @customer.Balance.ToString("C")</span>
-                    }
-                    else
-                    {
-                        <span>Balance: $0</span>
-                    }
-                </td>
-                <td>
-                    <a class="btn btn-primary btn-sm" href="/addpayment/@customer.Id">Add Payment</a>
-                    <a class="btn btn-primary btn-sm" href="/invoice/@customer.Id">View Invoice</a>
-                    <button class="btn btn-warning btn-sm" @onclick="() => EditCustomer(customer)">Edit</button>
-                </td>
-            </tr>
+            foreach (var customer in customers)
+            {
+                selectedCustomerIds[customer.Id] = selected;
+            }
         }
     }
-    </tbody>
-</table>
-<div class="align-content-md-end"> <a class="btn btn-primary" href="/addcustomer">Add Customer</a></div>
-
-@code {
-    private List<Customer> _customers = new();
-    private Customer? _editCustomer;
 
     protected override async Task OnInitializedAsync()
     {
-        _customers = await db.Customers.ToListAsync();
+        await LoadCustomers();
     }
 
-    private void EditCustomer(Customer customer)
+    private async Task LoadCustomers()
     {
-        _editCustomer = new Customer
+        customers = await DbContext.Customers
+            .Include(c => c.Services)
+            .ToListAsync();
+           
+        // Initialize dictionary for all customers
+        selectedCustomerIds = customers.ToDictionary(c => c.Id, _ => false);
+
+    }
+
+    private async Task ShowTransactions(int customerId)
+    {
+        if (selectedCustomerId == customerId)
         {
-            Id = customer.Id,
-            Name = customer.Name,
-            Address = customer.Address,
-            PaymentType = customer.PaymentType,
-            Balance = customer.Balance
-        };
-    }
-
-    private void CancelEdit()
-    {
-        _editCustomer = null;
-    }
-
-    private async Task SaveEditCustomer()
-    {
-        if (_editCustomer != null)
+            selectedCustomerId = null; // Collapse if already open
+            transactions.Clear();
+        }
+        else
         {
-            var customer = await db.Customers.FindAsync(_editCustomer.Id);
+            selectedCustomerId = customerId;
+            var customer = await DbContext.Customers.FirstOrDefaultAsync(c => c.Id == customerId);
             if (customer != null)
             {
-                customer.Name = _editCustomer.Name;
-                customer.Address = _editCustomer.Address;
-                customer.PaymentType = _editCustomer.PaymentType;
-                await db.SaveChangesAsync();
-                _customers = await db.Customers.ToListAsync();
+                transactions = await BalanceService.GetTransactionsForCustomer(customer);
             }
-            _editCustomer = null;
         }
     }
+    private static DateTime GetNextWednesday()
+    {
+        var today = DateTime.Today;
+        int daysUntilWednesday = ((int)DayOfWeek.Wednesday - (int)today.DayOfWeek + 7) % 7;
+        if (daysUntilWednesday == 0) // If today is Wednesday, go to next week
+            daysUntilWednesday = 7;
+        return today.AddDays(daysUntilWednesday);
+    }
+
+    private void OpenDatePickerForSelected()
+    {
+        customersForService = selectedCustomerIds
+            .Where(x => x.Value)
+            .Select(x => x.Key)
+            .ToList();
+
+        if (!customersForService.Any()) return;
+        selectedServiceDate = GetNextWednesday();
+
+        isDatePickerModalOpen = true;
+    }
+
+    private void CloseDatePicker()
+    {
+        isDatePickerModalOpen = false;
+        customersForService.Clear();
+    }
+
+    private async Task SaveServiceDate()
+    {
+        await BalanceService.CreateServicesAndUpdateBalances(customersForService, selectedServiceDate);
+        await LoadCustomers();
+        CloseDatePicker();
+    }
+
 }

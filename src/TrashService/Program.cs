@@ -1,3 +1,5 @@
+using TrashService.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
@@ -8,6 +10,7 @@ builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.AddNpgsqlDataSource("trash-services-db");
 builder.Services.AddAppDbContext(config.GetConnectionString("trash-services-db"));
+builder.Services.AddScoped<CustomerBalanceService>();
 
 var app = builder.Build();
 
