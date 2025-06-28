@@ -61,8 +61,8 @@ else
     private async Task LoadReconciliation()
     {
         // Define the start and end of the selected month
-        var startOfMonth = new DateTime(selectedMonth.Year, selectedMonth.Month, 1);
-        var endOfMonth = startOfMonth.AddMonths(1).AddDays(-1);
+        var startOfMonth = new DateTime(selectedMonth.Year, selectedMonth.Month, 1).ToUniversalTime();
+        var endOfMonth = startOfMonth.AddMonths(1).AddDays(-1).ToUniversalTime();
 
         // Total services provided in the month
         totalServices = await db.Services
@@ -70,8 +70,8 @@ else
             .CountAsync();
 
         // Total payments received in the month
-        totalPayments = await db.Payments
-            .Where(p => p.Date >= startOfMonth && p.Date <= endOfMonth)
+        totalPayments = await db.PaymentTransactions
+            .Where(p => p.TransactionDate >= startOfMonth && p.TransactionDate <= endOfMonth)
             .SumAsync(p => p.Amount);
 
         // Expected collection from postpay customers (services × price)

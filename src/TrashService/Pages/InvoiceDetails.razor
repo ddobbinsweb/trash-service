@@ -1,0 +1,93 @@
+@page "/customer/invoice/{CustomerId:int}"
+@inject AppDbContext DbContext
+@using Microsoft.EntityFrameworkCore
+
+<div class="container my-4 print-content">
+    <div class="card">
+        <div class="card-header no-print">
+            <div class="d-flex justify-content-between align-items-center">
+                <h3>Invoice for Unpaid Services</h3>
+                <button class="btn btn-primary no-print" @onclick="PrintInvoice">Print</button>
+            </div>
+        </div>
+        <div class="card-body d-print-flex" id="printableArea">
+            @if (_customer != null)
+            {
+                <div class="mb-4">
+                    <h4>@_customer.Name</h4>
+                    <p>Invoice Date: @DateTime.Now.ToShortDateString()</p>
+                </div>
+
+                @if (_unpaidServices.Any())
+                {
+                    <table class="table d-print-table">
+                        <thead>
+                        <tr >
+                            <th>Service Date</th>
+                            <th>Description</th>
+                            <th class="text-end">Amount</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var service in _unpaidServices)
+                        {
+                            <tr class="d-print-table-row">
+                                <td>@service.Date.ToShortDateString()</td>
+                                <td>Trash Collection Service</td>
+                                <td class="text-end">$@service.Price.ToString("F2")</td>
+                            </tr>
+                        }
+                        <tr class="table-active fw-bold">
+                            <td colspan="2" class="text-end">Total Due:</td>
+                            <td class="text-end">$@_totalDue.ToString("F2")</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <div class="alert alert-info">
+                        No unpaid services found.
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int CustomerId { get; set; }
+
+    private Customer? _customer = null!;
+    private List<Service> _unpaidServices = new();
+    private decimal _totalDue;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadInvoiceData();
+    }
+
+    private async Task LoadInvoiceData()
+    {
+        _customer = await DbContext.Customers
+            .FirstOrDefaultAsync(c => c.Id == CustomerId);
+
+        if (_customer != null)
+        {
+            _unpaidServices = await DbContext.Services
+                .Where(s => s.CustomerId == CustomerId && !s.IsPaid)
+                .OrderBy(s => s.Date)
+                .ToListAsync();
+
+            _totalDue = _unpaidServices.Sum(s => s.Price);
+        }
+    }
+
+    private void PrintInvoice()
+    {
+        // Using JavaScript interop to trigger browser print
+        JSRuntime.InvokeVoidAsync("window.print");
+    }
+
+    [Inject] private IJSRuntime JSRuntime { get; set; }
+}

@@ -53,9 +53,12 @@
 
         <div class="col-md-6">
             <div class="card">
-                <div class="card-header">
-                    Previous Services
-                </div>
+    <div class="card-header d-flex justify-content-between align-items-center">
+        Previous Services
+        <button class="btn btn-secondary btn-sm" @onclick="ViewUnpaidInvoice">
+            View Unpaid Services Invoice
+        </button>
+    </div>
                 <div class="card-body">
                     @if (previousServices.Any())
                     {
@@ -247,5 +250,10 @@
         public decimal Amount { get; set; }
 
         public string? Note { get; set; }
+    }
+
+    private void ViewUnpaidInvoice()
+    {
+        NavigationManager.NavigateTo($"/customer/invoice/{CustomerId}");
     }
 }
