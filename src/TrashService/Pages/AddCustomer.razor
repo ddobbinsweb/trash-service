@@ -5,7 +5,7 @@
 
 <h3>Add Customer</h3>
 
-<EditForm Model="customer" OnValidSubmit="SaveCustomer">
+<EditForm Model="customer"  OnSubmit="SaveCustomer">
     <div class="form-group">
     <label>Name: <input class="form-control"  @bind="customer.Name" /></label><br />
     <label>Address: <input class="form-control" @bind="customer.Address" /></label><br />
@@ -18,7 +18,7 @@
     </label>
     </div>
     <div class="btn-group" >
-        <button class="btn btn-secondary">Cancel</button>
+        <button class="btn btn-secondary" @onclick='()=> nav.NavigateTo("/")'>Cancel</button>
         <button class="btn btn-outline-secondary" type="reset">Reset</button>
         <button class="btn btn-primary" type="submit">Save</button>
     </div>
@@ -32,6 +32,6 @@
     {
         db.Customers.Add(customer);
         await db.SaveChangesAsync();
-        nav.NavigateTo("/customerlist");
+        nav.NavigateTo("/");
     }
 }

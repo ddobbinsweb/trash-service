@@ -16,7 +16,7 @@
         </div>
     </div>
 
-    @if (customers == null)
+    @if (customers.Count == 0)
     {
         <div class="d-flex justify-content-center py-5">
             <div class="spinner-border text-primary" role="status">
@@ -178,9 +178,9 @@
 }
 
 @code {
-    private List<Customer>? customers;
+    private List<Customer> customers = [];
     private List<PaymentTransaction> transactions = new();
-    private int? selectedCustomerId;
+    private int? selectedCustomerId = null;
     private Dictionary<int, bool> selectedCustomerIds = new();
     private bool isDatePickerModalOpen;
     private DateTime selectedServiceDate = DateTime.Today.AddDays(7);
