@@ -141,4 +141,28 @@ public class CustomerBalanceService(AppDbContext dbContext)
         await dbContext.SaveChangesAsync();
     }
 
+    public async Task UpdateCustomerBalance(int customerId)
+    {
+        var customer = await dbContext.Customers
+            .Include(c => c.Services)
+            .FirstOrDefaultAsync(c => c.Id == customerId);
+
+        if (customer == null)
+            throw new ArgumentException("Customer not found");
+
+        decimal balance = 0;
+
+        // Subtract unpaid service prices
+        foreach (var service in customer.Services)
+        {
+            if (!service.IsPaid)
+            {
+                balance -= service.Price;
+            }
+        }
+
+        customer.Balance = balance;
+        await dbContext.SaveChangesAsync();
+    }
+
 }
