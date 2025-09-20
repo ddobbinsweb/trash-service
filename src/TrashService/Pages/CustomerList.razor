@@ -3,7 +3,7 @@
 @inject AppDbContext DbContext
 @inject CustomerBalanceService BalanceService
 
-<div class="container-fluid py-4">
+<div class="container-fluid py-4 h-full">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="mb-0">Customer List</h3>
         <div>
@@ -103,6 +103,7 @@
                                                                 <th>Type</th>
                                                                 <th>Amount</th>
                                                                 <th>Description</th>
+                                                                <th>Actions</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody>
@@ -124,6 +125,17 @@
                                                                         $@transaction.Amount.ToString("F2")
                                                                     </td>
                                                                     <td>@transaction.Description</td>
+                                                                    <td>
+                                                                        @if (transaction.Type == TransactionType.ServiceCharge)
+                                                                        {
+                                                                            var service = customers.FirstOrDefault(c => c.Id == transaction.CustomerId)?.Services.FirstOrDefault(s => s.Date == transaction.TransactionDate);
+                                                                            if (service != null)
+                                                                            {
+                                                                                <button class="btn btn-sm btn-primary" @onclick="() => EditService(service)">Edit</button>
+                                                                                <button class="btn btn-sm btn-danger" @onclick="() => RemoveServiceAndRefresh(service)">Remove</button>
+                                                                            }
+                                                                        }
+                                                                    </td>
                                                                 </tr>
                                                             }
                                                         </tbody>
@@ -139,6 +151,25 @@
                                 </td>
                             </tr>
                         }
+                        @* @if (customer.Services.Any())
+                        {
+                            <tr>
+                                <td colspan="7">
+                                    <div>
+                                        <ul class="list-unstyled mb-0">
+                                            @foreach (var service in customer.Services.OrderByDescending(s => s.Date))
+                                            {
+                                                <li>
+                                                    @service.Date.ToShortDateString()
+                                                    <button class="btn btn-sm btn-link" @onclick="() => EditService(service)">Edit</button>
+                                                    <button class="btn btn-sm btn-danger" @onclick="() => RemoveService(service)">Remove</button>
+                                                </li>
+                                            }
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        } *@
                     }
                 </tbody>
             </table>
@@ -177,13 +208,16 @@
     <div class="modal-backdrop show"></div>
 }
 
+
 @code {
     private List<Customer> customers = [];
     private List<PaymentTransaction> transactions = new();
     private int? selectedCustomerId = null;
     private Dictionary<int, bool> selectedCustomerIds = new();
     private bool isDatePickerModalOpen;
+    private Service? serviceBeingEdited;
     private DateTime selectedServiceDate = DateTime.Today.AddDays(7);
+    private DateTime editServiceDate;
     private List<int> customersForService = new();
 
     private void SelectAllCustomers(bool selected)
@@ -265,4 +299,59 @@
         CloseDatePicker();
     }
 
+    private void EditService(Service service)
+    {
+        serviceBeingEdited = service;
+        editServiceDate = service.Date;
+        StateHasChanged();
+    }
+
+    private async void RemoveServiceAndRefresh(Service service)
+    {
+        DbContext.Services.Remove(service);
+        await DbContext.SaveChangesAsync();
+        await BalanceService.UpdateCustomerBalance(service.CustomerId);
+        await LoadCustomers();
+        if (selectedCustomerId != null)
+        {
+            var customer = await DbContext.Customers.FirstOrDefaultAsync(c => c.Id == selectedCustomerId);
+            if (customer != null)
+            {
+                transactions = await BalanceService.GetTransactionsForCustomer(customer);
+            }
+        }
+        StateHasChanged();
+    }
+
+    // private async Task SaveEditedServiceDate()
+    // {
+    //     if (serviceBeingEdited != null)
+    //     {
+    //         serviceBeingEdited.Date = editServiceDate;
+    //         DbContext.Services.Update(serviceBeingEdited);
+    //         await DbContext.SaveChangesAsync();
+    //         await BalanceService.UpdateCustomerBalance(serviceBeingEdited.CustomerId);
+    //         await LoadCustomers();
+    //         if (selectedCustomerId != null)
+    //         {
+    //             var customer = await DbContext.Customers.FirstOrDefaultAsync(c => c.Id == selectedCustomerId);
+    //             if (customer != null)
+    //             {
+    //                 transactions = await BalanceService.GetTransactionsForCustomer(customer);
+    //             }
+    //         }
+    //         StateHasChanged();
+    //     }
+    // }
+
+    private async void RemoveService(Service service)
+    {
+        DbContext.Services.Remove(service);
+        await DbContext.SaveChangesAsync();
+
+        // Update balance after removal
+        await BalanceService.UpdateCustomerBalance(service.CustomerId);
+
+        await LoadCustomers();
+    }
 }
