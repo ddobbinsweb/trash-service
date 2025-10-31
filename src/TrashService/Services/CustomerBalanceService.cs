@@ -1,3 +1,5 @@
+using TrashService.Models;
+
 namespace TrashService.Services;
 
 public class CustomerBalanceService(AppDbContext dbContext)
@@ -11,27 +13,33 @@ public class CustomerBalanceService(AppDbContext dbContext)
         {
             var customer = await dbContext.Customers
                 .Include(c => c.Services.Where(s => !s.IsPaid))
-                .FirstOrDefaultAsync(c => c.Id == customerId);
+                .FirstOrDefaultAsync(c => c.Id == customerId) ?? throw new ArgumentException("Customer not found");
 
-            if (customer == null)
-                throw new ArgumentException("Customer not found");
+     
 
-            // Add the prepayment to the customer's balance
-            customer.Balance += amount;
-
-            // Record the transaction
-            var paymentTransaction = new PaymentTransaction
+            if (customer.Balance >= 0)
             {
-                CustomerId = customerId,
-                Amount = amount,
-                TransactionDate = DateTime.UtcNow,
-                Description = $"Prepayment added",
-                Type = TransactionType.Prepayment
-            };
-            dbContext.PaymentTransactions.Add(paymentTransaction);
+                // Add the prepayment to the customer's balance
+                customer.Balance += amount;
+                // Record the transaction
+                var paymentTransaction = new PaymentTransaction
+                {
+                    CustomerId = customerId,
+                    Amount = amount,
+                    TransactionDate = DateTime.UtcNow,
+                    Description = "Prepayment added",
+                    Type = TransactionType.Prepayment
+                };
+                dbContext.PaymentTransactions.Add(paymentTransaction);
 
-            // If there are any unpaid services, attempt to pay them automatically
-            await ProcessPendingServices(customer);
+            }
+            else
+            {
+                // If there are any unpaid services, attempt to pay them automatically
+                ProcessPendingServices(customer, amount);
+            }
+
+
             await dbContext.SaveChangesAsync();
             await transaction.CommitAsync();
         }
@@ -42,32 +50,32 @@ public class CustomerBalanceService(AppDbContext dbContext)
         }
     }
 
-    private async Task ProcessPendingServices(Customer customer)
+    private void ProcessPendingServices(Customer customer, decimal amount)
     {
-        var unpaidServices =  customer.Services
+        var unpaidServices = customer.Services
             .Where(s => !s.IsPaid)
             .OrderBy(s => s.Date).ToList();
 
+        decimal fullAmount = amount;
         foreach (var service in unpaidServices)
         {
-            if (Math.Abs(customer.Balance) >= service.Price)
+            if (fullAmount > 0M && fullAmount > customer.Balance)
             {
-                customer.Balance -= service.Price;
+                customer.Balance += service.Price;
                 service.IsPaid = true;
                 service.PaymentDate = DateTime.UtcNow;
-                service.PaymentReference = $"AutoPaid-{DateTime.UtcNow:yyyyMMddHHmmss}";
+                service.PaymentReference = $"Paid-{DateTime.UtcNow:yyyyMMddHHmmss}";
 
-                // Record the transaction
                 var transaction = new PaymentTransaction
                 {
                     CustomerId = customer.Id,
-                    Amount = -service.Price,
+                    Amount = service.Price,
                     TransactionDate = DateTime.UtcNow,
                     Description = $"Service charge for date {service.Date:d}",
-                    Type = TransactionType.ServiceCharge
+                    Type = TransactionType.Payment
                 };
                 dbContext.PaymentTransactions.Add(transaction);
-                await dbContext.SaveChangesAsync();
+                fullAmount -= service.Price;
             }
             else
             {
@@ -86,7 +94,7 @@ public class CustomerBalanceService(AppDbContext dbContext)
     public async Task<List<PaymentTransaction>> GetTransactionsForCustomer(Customer customer)
     {
         var transactions = new List<PaymentTransaction>();
-        
+
         // Get all customer's services that don't have matching payment transactions
         var unpaidServices = await dbContext.Services
             .Where(s => s.CustomerId == customer.Id && !s.IsPaid)
@@ -98,7 +106,7 @@ public class CustomerBalanceService(AppDbContext dbContext)
             .Where(t => t.CustomerId == customer.Id)
             .OrderBy(t => t.TransactionDate)
             .ToListAsync();
-        
+
         transactions.AddRange(existingTransactions);
 
         // Add pending service charges for unpaid services

@@ -15,5 +15,6 @@ public enum TransactionType
 {
     Prepayment,
     ServiceCharge,
-    Refund
+    Refund,
+    Payment
 }
